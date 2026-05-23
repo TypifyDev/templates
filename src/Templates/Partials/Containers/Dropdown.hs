@@ -27,28 +27,38 @@ import qualified Data.Text as T
 --   , ("focus", noTransition (color (Cyan C500)))
 --   ]
 
--- | Parameterized version with custom colors
+-- | Parameterized version with custom colors. The text color is for
+-- the rendered '<select>' (i.e. the currently selected option) — pass
+-- a dark colour for light backgrounds and vice versa. Browsers will
+-- continue to use system defaults for the *open* options menu;
+-- styling that requires platform-level overrides.
 dropdown''
   :: ( MonadFix m
      , DomBuilder t m
      )
   => WhenTW (WithTransition GradientColor) -- ^ Background color
   -> WhenTW (WithTransition ColorWithOpacity) -- ^ Border color (including focus state)
+  -> ColorWithOpacity -- ^ Text color (selected option in the closed dropdown)
   -> Map.Map a T.Text
   -> SelectElementConfig er t (DomBuilderSpace m)
   -> m (Dynamic t a)
-dropdown'' bgCol borderCol options cfg' = mdo
-  let class' = classhUnsafe [ w .~~ TWSize_Full
-                            , px .~~ TWSize 4
-                            , py .~~ TWSize 3
-                            , bw .~~ B1
-                            , bc .~ borderCol
-                            , br .~~ R_Lg
-                            , border . outline .~ [("focus", Outline_None)]
-                            , mb .~~ twSize' 5
-                            , bgColor .~ bgCol
-                            , custom .~ "font-[Sarabun] text-lg"
-                            ]
+dropdown'' bgCol borderCol textCol options cfg' = mdo
+  -- BoxConfig classes (layout, bg, border) and TextConfigTW classes
+  -- (text colour) are different setter types, so they can't share a
+  -- single classhUnsafe list. We assemble each separately and join.
+  let boxCls  = classhUnsafe [ w .~~ TWSize_Full
+                             , px .~~ TWSize 4
+                             , py .~~ TWSize 3
+                             , bw .~~ B1
+                             , bc .~ borderCol
+                             , br .~~ R_Lg
+                             , border . outline .~ [("focus", Outline_None)]
+                             , mb .~~ twSize' 5
+                             , bgColor .~ bgCol
+                             , custom .~ "font-[Sarabun] text-lg"
+                             ]
+      textCls = classhUnsafe [ text_color .~~ textCol ]
+      class'  = boxCls <> " " <> textCls
   let safeInitial = case Map.toList options of
         [] -> error "dropdown' requires non-empty options map"
         (k,v):_ -> v
