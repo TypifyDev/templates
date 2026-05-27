@@ -11,6 +11,7 @@ library
                      Templates.Partials.Image
                      Templates.Partials.Containers
                      Templates.Partials.Containers.Dropdown
+                     Templates.Partials.Containers.Selection
                      Templates.Partials.Inputs
                      Templates.Partials.Lists
                      Templates.Partials.Modal
