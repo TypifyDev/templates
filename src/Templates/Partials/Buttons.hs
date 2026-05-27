@@ -425,3 +425,31 @@ greedyButton c = do
 
 greedyButton_ :: forall t m a. DomBuilder t m => m a -> m (Event t ())
 greedyButton_ c = fmap fst $ greedyButton c
+
+-- | A "+ Create new <entity>" / "Cancel" toggle button. The
+-- current on/off state is owned by the caller (passed as a
+-- 'Dynamic t Bool') so external events — e.g. the user picking
+-- an existing entity from a companion dropdown — can reset it.
+-- Returns the click event so the caller can fold it into the
+-- state Dynamic.
+--
+-- Label: "Cancel" when on, "+ Create new <entityLabel>" when off.
+createNewToggleButton
+  :: (Template t m, DomBuilder t m)
+  => C.ColorWithOpacity   -- ^ text colour
+  -> T.Text               -- ^ entity label (e.g. "team")
+  -> Dynamic t Bool       -- ^ caller-owned on/off state (controls label only)
+  -> m (Event t ())
+createNewToggleButton textCol entityLabel isOnD = do
+  (btnEl, _) <- elAttr' "button"
+    ( "type" =: "button"
+   <> "class" =: C.classhUnsafe
+        [ C.mt .~~ C.twSize' 2
+        , C.mb .~~ C.twSize' 2
+        , C.py .~~ C.TWSize 1
+        , C.px .~~ C.TWSize 3
+        ]
+    ) $ C.dynTextS (C.classhUnsafe [C.text_color .~~ textCol, C.text_size .~~ C.SM]) $
+      ffor isOnD $ \on ->
+        if on then "Cancel" else "+ Create new " <> entityLabel
+  pure (domEvent Click btnEl)
