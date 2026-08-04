@@ -1,11 +1,12 @@
+cabal-version: 3.4
 name: templates
 version: 0.1.0.0
-cabal-version: >= 1.10
 build-type: Simple
 
 
 library
     hs-source-dirs:   src
+    default-language: GHC2024
     exposed-modules: Templates.Partials.Buttons
                      Templates.Partials.Checkbox
                      Templates.Partials.Image
