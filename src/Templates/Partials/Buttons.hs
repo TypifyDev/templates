@@ -460,33 +460,13 @@ createNewToggleButton textCol entityLabel isOnD = do
 -- "is an existing entity picked AND we're not in create-mode".
 editButton
   :: (Template t m, DomBuilder t m)
-  => C.ColorWithOpacity   -- ^ text colour
-  -> T.Text               -- ^ entity label (used only for a11y label)
+  => C.WhenTW (C.WithTransition C.GradientColor)
+                              -- ^ background colour (same shape as primaryButton')
+  -> [(C.TWCondition, C.WithTransition C.GradientColor)]
+                              -- ^ background hover/active states
+  -> C.ColorWithOpacity        -- ^ text colour
+  -> C.ColorWithOpacity        -- ^ ring colour (focus halo)
+  -> T.Text                    -- ^ entity label (unused, kept for a11y hooks)
   -> m (Event t ())
-editButton textCol _entityLabel = do
-  (btnEl, _) <- elAttr' "button"
-    ( "type" =: "button"
-   <> "class" =: C.classhUnsafe
-        [ C.ml      .~~ C.twSize' 2
-        , C.mt      .~~ C.twSize' 2
-        , C.mb      .~~ C.twSize' 2
-        , C.py      .~~ C.TWSize 1
-        , C.px      .~~ C.TWSize 3
-        , C.br      .~~ C.R_Md
-        , C.bw      .~~ C.B1
-        , C.bc      .~~ C.color C.White
-        , C.cursor  .~~ C.CursorPointer
-        , C.bgColor .~^
-            [ ("def",   C.noTransition (C.solidColor C.Transparent))
-            , ("hover", C.solidColorOpacity C.White 10
-                          `C.withTransition` C.Duration_200)
-            ]
-        ]
-    ) $ C.textS
-         (C.classhUnsafe
-            [ C.text_color  .~~ textCol
-            , C.text_size   .~~ C.XS
-            , C.text_weight .~~ C.Medium
-            ])
-         "\9998 Edit"  -- ✎ pencil glyph + label
-  pure (domEvent Click btnEl)
+editButton bgCol bgStates txtCol ringCol _entityLabel =
+  primaryButton' bgCol bgStates txtCol ringCol "\9998 Edit"

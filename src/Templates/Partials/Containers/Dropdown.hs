@@ -333,6 +333,11 @@ selectOrCreateBlock
   => [BoxConfig -> BoxConfig]          -- ^ box style for the dropdown
   -> ColorWithOpacity                  -- ^ select element text colour
   -> ColorWithOpacity                  -- ^ label + button text colour
+  -> WhenTW (WithTransition GradientColor)
+                                       -- ^ edit-button background
+  -> [(TWCondition, WithTransition GradientColor)]
+                                       -- ^ edit-button background hover/active states
+  -> ColorWithOpacity                  -- ^ edit-button ring colour
   -> T.Text                            -- ^ entity label (e.g. "team")
   -> Maybe k                           -- ^ pre-selected existing-entity id (EditJob); Nothing for new
   -> Dynamic t [(k, T.Text)]           -- ^ existing options (Dynamic to support late-arriving API data)
@@ -345,7 +350,7 @@ selectOrCreateBlock
   -- 'PrivateRequest_GetX k' and prefill the form via @setValue@ on the
   -- input refs. The form is also toggled visible on edit click (same
   -- affordance as create-new mode).
-selectOrCreateBlock boxStyle textCol labelCol entityLabel initialId optsD createFormWidget = mdo
+selectOrCreateBlock boxStyle textCol labelCol editBg editBgStates editRing entityLabel initialId optsD createFormWidget = mdo
   let hasOptsD :: Dynamic t Bool
       hasOptsD = not . null <$> optsD
       -- Build a Selection from the options Dynamic. Initial id (if
@@ -388,7 +393,7 @@ selectOrCreateBlock boxStyle textCol labelCol entityLabel initialId optsD create
   let pickedD = join <$> selectedD
       showEditButton = (\mk cm -> isJust mk && not cm) <$> pickedD <*> createModeD
   editBtnClickEv <- elDynAttr "div" (showWhenAttr showEditButton) $
-    editButton labelCol entityLabel
+    editButton editBg editBgStates labelCol editRing entityLabel
   let editClickEv :: Event t k
       editClickEv =
         attachWithMaybe (\mk () -> mk) (current pickedD) editBtnClickEv
