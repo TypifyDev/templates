@@ -453,3 +453,25 @@ createNewToggleButton textCol entityLabel isOnD = do
       ffor isOnD $ \on ->
         if on then "Cancel" else "+ Create new " <> entityLabel
   pure (domEvent Click btnEl)
+
+-- | Companion to 'createNewToggleButton' for the "edit this existing
+-- one" flow added F11 (2026-10-30). Mini-sized button rendered next
+-- to the entity dropdown; parent widget hides/shows it based on
+-- "is an existing entity picked AND we're not in create-mode".
+editButton
+  :: (Template t m, DomBuilder t m)
+  => C.ColorWithOpacity   -- ^ text colour
+  -> T.Text               -- ^ entity label (used only for a11y label)
+  -> m (Event t ())
+editButton textCol _entityLabel = do
+  (btnEl, _) <- elAttr' "button"
+    ( "type" =: "button"
+   <> "class" =: C.classhUnsafe
+        [ C.ml .~~ C.twSize' 2
+        , C.mt .~~ C.twSize' 2
+        , C.mb .~~ C.twSize' 2
+        , C.py .~~ C.TWSize 0.5
+        , C.px .~~ C.TWSize 2
+        ]
+    ) $ C.textS (C.classhUnsafe [C.text_color .~~ textCol, C.text_size .~~ C.XS]) "Edit"
+  pure (domEvent Click btnEl)

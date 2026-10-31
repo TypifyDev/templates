@@ -19,7 +19,7 @@ import Data.Map ((!))
 import qualified Data.Text as T
 import Text.Read (readMaybe)
 import Templates.DomExtras (hideWhenAttr, showWhenAttr)
-import Templates.Partials.Buttons (createNewToggleButton)
+import Templates.Partials.Buttons (createNewToggleButton, editButton)
 import Templates.Partials.Containers.Selection
   ( Selection (..)
   , selectionDropdownMountedOnce
@@ -337,7 +337,14 @@ selectOrCreateBlock
   -> Maybe k                           -- ^ pre-selected existing-entity id (EditJob); Nothing for new
   -> Dynamic t [(k, T.Text)]           -- ^ existing options (Dynamic to support late-arriving API data)
   -> m formRefs                        -- ^ create-form widget
-  -> m (Dynamic t (Maybe k), Dynamic t Bool, formRefs)
+  -> m (Dynamic t (Maybe k), Dynamic t Bool, Event t k, formRefs)
+  -- ^ Returns (picked-existing-id, create-form-visible, edit-click
+  -- event, form refs). The 'Event t k' fires when the user clicks the
+  -- "Edit" mini-button next to the dropdown — carries the id of the
+  -- currently-picked existing entity so the caller can fire a
+  -- 'PrivateRequest_GetX k' and prefill the form via @setValue@ on the
+  -- input refs. The form is also toggled visible on edit click (same
+  -- affordance as create-new mode).
 selectOrCreateBlock boxStyle textCol labelCol entityLabel initialId optsD createFormWidget = mdo
   let hasOptsD :: Dynamic t Bool
       hasOptsD = not . null <$> optsD
@@ -355,9 +362,11 @@ selectOrCreateBlock boxStyle textCol labelCol entityLabel initialId optsD create
       pickedExistingEv :: Event t ()
       pickedExistingEv = () <$ fmapMaybe id (updated (join <$> selectedD))
       -- Entering create-mode resets the dropdown to its placeholder
-      -- (the @Nothing@ head). Rising edge of createModeD only.
+      -- (the @Nothing@ head). Rising edge of createModeD only on the
+      -- "create new" toggle — NOT on edit, because edit keeps the
+      -- current selection to prove which entity we're editing.
       clearOnCreate :: Event t (Maybe k)
-      clearOnCreate = Nothing <$ ffilter id (updated createModeD)
+      clearOnCreate = Nothing <$ ffilter id (updated toggleD)
   selectedD <- elDynAttr "div" (hideWhenAttr (not <$> hasOptsD)) $
     selectionDropdownMountedOnce
       boxStyle
@@ -370,19 +379,35 @@ selectOrCreateBlock boxStyle textCol labelCol entityLabel initialId optsD create
       selectionEv
   toggleClickEv <- elDynAttr "div" (hideWhenAttr (not <$> hasOptsD)) $
     createNewToggleButton labelCol entityLabel toggleD
+  -- "Edit" mini-button: only shows when an existing entity is picked
+  -- AND we're not already in create-mode. On click, fires
+  -- editClickEv with the picked id, and flips editModeD so the form
+  -- becomes visible. The caller is responsible for routing the id
+  -- through a 'PrivateRequest_GetX' and pushing the response into
+  -- the form's labelled inputs via setValue events.
+  let pickedD = join <$> selectedD
+      showEditButton = (\mk cm -> isJust mk && not cm) <$> pickedD <*> createModeD
+  editBtnClickEv <- elDynAttr "div" (showWhenAttr showEditButton) $
+    editButton labelCol entityLabel
+  let editClickEv :: Event t k
+      editClickEv =
+        attachWithMaybe (\mk () -> mk) (current pickedD) editBtnClickEv
   -- Toggle's user-controlled state. Click flips; picking an
   -- existing resets to False so the submission drops the
-  -- new-form values.
+  -- new-form values. Entering edit mode also opens the form.
   toggleD <- foldDyn ($) False $ leftmost
     [ not          <$ toggleClickEv
     , const False  <$ pickedExistingEv
     ]
-  let createModeD = (\hasOpts on -> not hasOpts || on) <$> hasOptsD <*> toggleD
-      -- selectionDropdownMountedOnce returns Dynamic t (Maybe (Maybe Int64));
-      -- 'join' collapses "not-yet-mounted" and "placeholder" into Nothing.
-      pickedD = join <$> selectedD
+  editModeD <- holdDyn False $ leftmost
+    [ True  <$ editClickEv
+    , False <$ pickedExistingEv
+    , False <$ ffilter id (updated toggleD)
+    ]
+  let createModeD = (\hasOpts on edit -> not hasOpts || on || edit)
+                      <$> hasOptsD <*> toggleD <*> editModeD
   formRefs <- elDynAttr "div" (showWhenAttr createModeD) createFormWidget
-  pure (pickedD, createModeD, formRefs)
+  pure (pickedD, createModeD, editClickEv, formRefs)
   where
     -- Build a non-empty Selection from options + optional initial id:
     --   * If 'initialId' matches a row, that row is the Selection
