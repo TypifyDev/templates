@@ -467,11 +467,26 @@ editButton textCol _entityLabel = do
   (btnEl, _) <- elAttr' "button"
     ( "type" =: "button"
    <> "class" =: C.classhUnsafe
-        [ C.ml .~~ C.twSize' 2
-        , C.mt .~~ C.twSize' 2
-        , C.mb .~~ C.twSize' 2
-        , C.py .~~ C.TWSize 0.5
-        , C.px .~~ C.TWSize 2
+        [ C.ml      .~~ C.twSize' 2
+        , C.mt      .~~ C.twSize' 2
+        , C.mb      .~~ C.twSize' 2
+        , C.py      .~~ C.TWSize 1
+        , C.px      .~~ C.TWSize 3
+        , C.br      .~~ C.R_Md
+        , C.bw      .~~ C.B1
+        , C.bc      .~~ C.color C.White
+        , C.cursor  .~~ C.CursorPointer
+        , C.bgColor .~^
+            [ ("def",   C.noTransition (C.solidColor C.Transparent))
+            , ("hover", C.solidColorOpacity C.White 10
+                          `C.withTransition` C.Duration_200)
+            ]
         ]
-    ) $ C.textS (C.classhUnsafe [C.text_color .~~ textCol, C.text_size .~~ C.XS]) "Edit"
+    ) $ C.textS
+         (C.classhUnsafe
+            [ C.text_color  .~~ textCol
+            , C.text_size   .~~ C.XS
+            , C.text_weight .~~ C.Medium
+            ])
+         "\9998 Edit"  -- ✎ pencil glyph + label
   pure (domEvent Click btnEl)
